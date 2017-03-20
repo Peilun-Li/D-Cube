@@ -37,6 +37,8 @@ def D_Cube():
             sql += "a.%s=b.%s AND " % (da, da)
         sql = sql[:-5]
         exec_sql(db_conn, sql)
+        drop_table(db_conn, "%s_tuple_to_remove" % relation)
+
         for da in dimension_attributes:
             drop_and_copy_table(db_conn, relation, relation+"_"+da+"_set", "distinct "+da)
 
@@ -47,6 +49,7 @@ def D_Cube():
                      (relation, relation, da, da, da))
         exec_sql(db_conn, "insert into %s_results select * from %s_res_to_add" % (relation, relation))
         block_cnt = int(get_first_res(db_conn, "select count(*) from %s_res_to_add" % relation))
+        drop_table(db_conn, "%s_res_to_add" % relation)
         print "block %d: density: %.8f count: %d" % (itr, max_density, block_cnt)
 
 
@@ -79,7 +82,8 @@ def find_single_block(relation_mass):
         insert(db_conn, relation+"_block_card_list", "'%s', %d" % (da, cur_card))
         insert(db_conn, relation+"_card_list", "'%s', %d" % (da, cur_card))
 
-    max_density = calc_density(block_mass, relation_mass)
+    # max_density = calc_density(block_mass, relation_mass)
+    max_density = 0.0
     r, best_r = 1, 1
     for da in dimension_attributes:
         # drop_and_copy_table(db_conn, relation+"_"+da+"_set", relation+"_"+da+"_order", "*", copy_data=False)
@@ -89,6 +93,8 @@ def find_single_block(relation_mass):
                  (relation, da, cnt_block_set+2))
 
     while cnt_block_set > 0:
+        # bug fix
+        max_density = calc_density(block_mass, relation_mass)
         for da in dimension_attributes:
             drop_table(db_conn, "%s_%s_mass_set" % (relation, da))
             if measure_attribute == "":
@@ -228,7 +234,8 @@ def select_dimension(block_mass, relation_mass):
                     print "dimension:", da, "card:", cur_card, get_first_res(db_conn,
                                                               "select count(*) from %s_%s_mass_set" %
                                                               (relation, da)), "density:", tmp_density
-        print "selected dimension:", dimension
+        if DEBUG:
+            print "selected dimension:", dimension
         return dimension
 
 
