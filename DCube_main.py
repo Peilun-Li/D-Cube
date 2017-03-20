@@ -25,7 +25,7 @@ def D_Cube():
         except:
             print "relation already empty"
             return
-        find_single_block(relation_mass)
+        max_density = find_single_block(relation_mass)
 
         drop_and_copy_table(db_conn, relation, "%s_tuple_to_remove" % relation, "*")
         for da in dimension_attributes:
@@ -46,6 +46,8 @@ def D_Cube():
                               "(select * from %s_%s_res_block_set b where a.%s=b.%s)" %
                      (relation, relation, da, da, da))
         exec_sql(db_conn, "insert into %s_results select * from %s_res_to_add" % (relation, relation))
+        block_cnt = int(get_first_res(db_conn, "select count(*) from %s_res_to_add" % relation))
+        print "block %d: density: %.8f count: %d" % (itr, max_density, block_cnt)
 
 
 def update_block_set_and_block_card_list():
@@ -152,6 +154,7 @@ def find_single_block(relation_mass):
         drop_table(db_conn, "%s_%s_res_block_set" % (relation, da))
         exec_sql(db_conn, "select %s into %s_%s_res_block_set from %s_%s_order where orders >= %d" %
                  (da, relation, da, relation, da, best_r))
+    return max_density
 
 
 def calc_density(block_mass, relation_mass):
