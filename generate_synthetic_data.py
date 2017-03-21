@@ -20,6 +20,6 @@ def write_to_file(syn_data, path):
 if __name__ == "__main__":
     syn_data = []
     add_block(syn_data, [0, 0, 0], [500, 500, 500], 0.0000)
-    add_block(syn_data, [100, 100, 100], [3, 6, 10], 1.0)
-    add_block(syn_data, [300, 300, 300], [7, 4, 11], 0.09)
+    add_block(syn_data, [100, 100, 100], [3, 6, 10], 0.99)
+    add_block(syn_data, [300, 300, 300], [7, 4, 11], 0.05)
     write_to_file(syn_data, "syn.csv")

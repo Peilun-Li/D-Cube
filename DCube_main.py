@@ -9,6 +9,7 @@ db_conn = None
 def D_Cube():
     drop_and_copy_table(db_conn, relation, relation+"_copy", "*")
     drop_and_copy_table(db_conn, relation, relation+"_results", "*", copy_data=False)
+    drop_and_create_table(db_conn, relation+"_parameters", "block integer, density numeric, row_count integer")
     for da in dimension_attributes:
         drop_and_copy_table(db_conn, relation, relation+"_"+da+"_set", "distinct "+da)
     for itr in range(1, 1+k):
@@ -27,6 +28,7 @@ def D_Cube():
             return
         max_density = find_single_block(relation_mass)
 
+        """
         drop_and_copy_table(db_conn, relation, "%s_tuple_to_remove" % relation, "*")
         for da in dimension_attributes:
             exec_sql(db_conn, "delete from %s_tuple_to_remove a where not exists "
@@ -38,6 +40,16 @@ def D_Cube():
         sql = sql[:-5]
         exec_sql(db_conn, sql)
         drop_table(db_conn, "%s_tuple_to_remove" % relation)
+        """
+
+        # improve efficiency
+        exec_sql(db_conn, "alter table %s add column _to_remove smallint default 1" % relation)
+        for da in dimension_attributes:
+            update(db_conn, relation, "_to_remove = 0 where not exists "
+                                      "(select * from %s_%s_res_block_set b where %s.%s=b.%s)" %
+                   (relation, da, relation, da, da))
+        exec_sql(db_conn, "delete from %s where _to_remove = 1" % relation)
+        exec_sql(db_conn, "alter table %s drop column _to_remove" % relation)
 
         for da in dimension_attributes:
             drop_and_copy_table(db_conn, relation, relation+"_"+da+"_set", "distinct "+da)
@@ -50,6 +62,7 @@ def D_Cube():
         exec_sql(db_conn, "insert into %s_results select * from %s_res_to_add" % (relation, relation))
         block_cnt = int(get_first_res(db_conn, "select count(*) from %s_res_to_add" % relation))
         drop_table(db_conn, "%s_res_to_add" % relation)
+        insert(db_conn, relation+"_parameters", "%d, %.8f, %d" % (itr, max_density, block_cnt))
         print "block %d: density: %.8f count: %d" % (itr, max_density, block_cnt)
 
 
@@ -202,6 +215,12 @@ def select_dimension(block_mass, relation_mass):
             if cur_card > max_card:
                 max_card = cur_card
                 dimension = da
+            if DEBUG:
+                print "dimension:", da, "card:", cur_card, get_first_res(db_conn,
+                                                                         "select count(*) from %s_%s_mass_set" %
+                                                                         (relation, da))
+        if DEBUG:
+            print "selected dimension:", dimension
         return dimension
     elif dimension_selection == "dense":
         max_density = float("-inf")
@@ -240,7 +259,7 @@ def select_dimension(block_mass, relation_mass):
 
 
 def drop_tables():
-    global_tables = ["_block", "_block_card_list", "_card_list", "_res_to_add", "_results", "_tuple_to_remove"]
+    global_tables = ["_block", "_block_card_list", "_card_list", "_res_to_add", "_tuple_to_remove"]
     da_tables = ["_block_set", "_mass_set", "_order", "_remove_set", "_res_block_set", "_set"]
     for tb in global_tables:
         drop_table(db_conn, relation+tb)
@@ -265,5 +284,4 @@ def main():
 
 
 if __name__ == "__main__":
-
     main()
