@@ -5,11 +5,11 @@ PSQL_DB_USER = "postgres"
 PSQL_DB_PWD = "password"
 PSQL_DB_PORT = 5432
 
-dataset = "syn"
+dataset = "videos"
 
 if dataset == "videos":
     relation = "videos_sample"
-    k = 5
+    k = 1
     # dimension_attributes = ["username", "item", "timestamp"]
     # measure_attribute = "rating" # or "" if just count tuples
     dimension_attributes = ["username", "item", "timestamp", "rating"]

@@ -2,6 +2,8 @@ from DCube_params import *
 from DCube_sql import *
 import sys
 import numpy as np
+from timeit import default_timer as timer
+
 
 db_conn = None
 
@@ -9,10 +11,11 @@ db_conn = None
 def D_Cube():
     drop_and_copy_table(db_conn, relation, relation+"_copy", "*")
     drop_and_copy_table(db_conn, relation, relation+"_results", "*", copy_data=False)
-    drop_and_create_table(db_conn, relation+"_parameters", "block integer, density numeric, row_count integer")
+    drop_and_create_table(db_conn, relation+"_parameters", "block integer, density numeric, row_count integer, time numeric")
     for da in dimension_attributes:
         drop_and_copy_table(db_conn, relation, relation+"_"+da+"_set", "distinct "+da)
     for itr in range(1, 1+k):
+        start = timer()
         if DEBUG:
             print "iteration:", itr
         try:
@@ -62,8 +65,9 @@ def D_Cube():
         exec_sql(db_conn, "insert into %s_results select * from %s_res_to_add" % (relation, relation))
         block_cnt = int(get_first_res(db_conn, "select count(*) from %s_res_to_add" % relation))
         drop_table(db_conn, "%s_res_to_add" % relation)
-        insert(db_conn, relation+"_parameters", "%d, %.8f, %d" % (itr, max_density, block_cnt))
-        print "block %d: density: %.8f count: %d" % (itr, max_density, block_cnt)
+        end = timer()
+        insert(db_conn, relation+"_parameters", "%d, %.8f, %d, %.8f" % (itr, max_density, block_cnt, end-start))
+        print "block %d: density: %.8f count: %d time: %.8f" % (itr, max_density, block_cnt, end-start)
 
 
 def update_block_set_and_block_card_list():
@@ -90,10 +94,16 @@ def find_single_block(relation_mass):
                           max_len_of_attributes)
     for da in dimension_attributes:
         drop_and_copy_table(db_conn, relation+"_"+da+"_set", relation+"_"+da+"_block_set", "*")
+        exec_sql(db_conn, "create index %s_%s_block_set_index on %s_%s_block_set(%s)" %
+                 (relation, da, relation, da, da))
         cur_card = int(get_first_res(db_conn, "select count(%s) from %s_%s_block_set" % (da, relation, da)))
         cnt_block_set += cur_card
         insert(db_conn, relation+"_block_card_list", "'%s', %d" % (da, cur_card))
         insert(db_conn, relation+"_card_list", "'%s', %d" % (da, cur_card))
+    exec_sql(db_conn, "create index %s_card_list_index on %s_card_list(attribute)" %
+             (relation, relation))
+    exec_sql(db_conn, "create index %s_block_card_list_index on %s_block_card_list(attribute)" %
+             (relation, relation))
 
     # max_density = calc_density(block_mass, relation_mass)
     max_density = 0.0
@@ -104,6 +114,8 @@ def find_single_block(relation_mass):
         drop_and_copy_table(db_conn, relation+"_"+da+"_set", relation+"_"+da + "_order", "*")
         exec_sql(db_conn, "alter table %s_%s_order add column orders integer default %d" %
                  (relation, da, cnt_block_set+2))
+        exec_sql(db_conn, "create index %s_%s_order_index on %s_%s_order(%s)" %
+                 (relation, da, relation, da, da))
 
     while cnt_block_set > 0:
         # bug fix
