@@ -5,18 +5,25 @@ PSQL_DB_USER = "postgres"
 PSQL_DB_PWD = "password"
 PSQL_DB_PORT = 5432
 
-dataset = "videos"
+dataset = "darpa"
 
-if dataset == "videos":
-    relation = "videos_sample"
-    k = 1
-    # dimension_attributes = ["username", "item", "timestamp"]
-    # measure_attribute = "rating" # or "" if just count tuples
-    dimension_attributes = ["username", "item", "timestamp", "rating"]
+if dataset == "darpa":
+    # relation/table name
+    relation = "darpa_sample"
+    # k is number of dense blocks to find
+    k = 5
+    # column names for dimension attributes
+    dimension_attributes = ["source", "destination", "timestamp"]
+    # column name for measure attribute, or empty "" if the mass is just count of rows
     measure_attribute = ""
-    density_measure = "sus"  # ari, geo, sus
-    dimension_selection = "dense"  # dense, card
-    max_len_of_attributes = 9
+    # density measure can be ari, geo or sus,
+    # where ari = arithmetic arithmetic average degree, geo = geometric average degree, sus = suspiciousness
+    density_measure = "ari"
+    # dimension selection can be dense or card,
+    # where dense = maximum density first, card = maximum cardinality first
+    dimension_selection = "dense"
+    # max length of strings in dimension_attributes
+    max_len_of_attributes = 20
 elif dataset == "syn":
     relation = "syn"
     k = 2
@@ -25,11 +32,11 @@ elif dataset == "syn":
     density_measure = "ari"  # ari, geo, sus
     dimension_selection = "dense"  # dense, card
     max_len_of_attributes = 9
-elif dataset == "darpa":
-    relation = "darpa_sample"
-    k = 5
-    dimension_attributes = ["source", "destination", "timestamp"]
+elif dataset == "videos":
+    relation = "videos_sample"
+    k = 1
+    dimension_attributes = ["username", "item", "timestamp", "rating"]
     measure_attribute = ""
-    density_measure = "ari"
+    density_measure = "sus"
     dimension_selection = "dense"
-    max_len_of_attributes = 20
+    max_len_of_attributes = 9

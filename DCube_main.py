@@ -284,10 +284,10 @@ def main():
     global db_conn
     try:
         db_conn = connect_db()
-        #drop_tables()
-        #return
         D_Cube()
+        drop_tables()
         close_db(db_conn)
+        print "D_Cube finished! Results are stored in %s_results and %s_parameters" % (relation, relation)
     except:
         print "Exception:", sys.exc_info()[0]
         if db_conn:
