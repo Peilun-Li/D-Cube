@@ -119,7 +119,7 @@ def find_single_block(relation_mass):
 
     while cnt_block_set > 0:
         # bug fix
-        max_density = calc_density(block_mass, relation_mass)
+        max_density = max(max_density, calc_density(block_mass, relation_mass))
         for da in dimension_attributes:
             drop_table(db_conn, "%s_%s_mass_set" % (relation, da))
             if measure_attribute == "":
