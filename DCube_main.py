@@ -8,14 +8,17 @@ from timeit import default_timer as timer
 db_conn = None
 use_index = True
 dummy_column = True
-da_str = ",".join(dimension_attributes)
 
 
 def D_Cube():
+
+    cur = db_conn.cursor()
+    cur.execute("select * from %s limit 0" % relation)
+    column_str = ",".join([desc[0] for desc in cur.description])
     drop_and_copy_table(db_conn, relation, relation+"_copy", "*")
     drop_and_copy_table(db_conn, relation, relation+"_results", "*", copy_data=False)
     if dummy_column:
-        exec_sql(db_conn, "alter table %s_results add column _to_remove smallint" % relation)
+        exec_sql(db_conn, "alter table %s_results add column block_idx smallint" % relation)
     drop_and_create_table(db_conn, relation+"_parameters", "block integer, density numeric, row_count integer, time numeric")
     for da in dimension_attributes:
         drop_and_copy_table(db_conn, relation, relation+"_"+da+"_set", "distinct "+da)
@@ -64,7 +67,7 @@ def D_Cube():
 
         if dummy_column:
             exec_sql(db_conn, "insert into %s_results select %s, _to_remove as block_idx from %s where _to_remove<>0" %
-                     (relation, da_str, relation))
+                     (relation, column_str, relation))
             block_cnt = int(get_first_res(db_conn, "select count(*) from %s where _to_remove<>0" % relation))
         else:
             drop_and_copy_table(db_conn, "%s_copy" % relation, "%s_res_to_add" % relation, "*")
