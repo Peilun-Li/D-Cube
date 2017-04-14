@@ -6,6 +6,8 @@ from timeit import default_timer as timer
 
 
 db_conn = None
+use_index = True
+dummy_column = False
 
 
 def D_Cube():
@@ -30,20 +32,6 @@ def D_Cube():
             print "relation already empty"
             return
         max_density = find_single_block(relation_mass)
-
-        """
-        drop_and_copy_table(db_conn, relation, "%s_tuple_to_remove" % relation, "*")
-        for da in dimension_attributes:
-            exec_sql(db_conn, "delete from %s_tuple_to_remove a where not exists "
-                              "(select * from %s_%s_res_block_set b where a.%s=b.%s)" %
-                     (relation, relation, da, da, da))
-        sql = "delete from %s a using %s_tuple_to_remove b where " % (relation, relation)
-        for da in dimension_attributes:
-            sql += "a.%s=b.%s AND " % (da, da)
-        sql = sql[:-5]
-        exec_sql(db_conn, sql)
-        drop_table(db_conn, "%s_tuple_to_remove" % relation)
-        """
 
         # improve efficiency
         exec_sql(db_conn, "alter table %s add column _to_remove smallint default 1" % relation)
@@ -94,16 +82,18 @@ def find_single_block(relation_mass):
                           max_len_of_attributes)
     for da in dimension_attributes:
         drop_and_copy_table(db_conn, relation+"_"+da+"_set", relation+"_"+da+"_block_set", "*")
-        exec_sql(db_conn, "create index %s_%s_block_set_index on %s_%s_block_set(%s)" %
-                 (relation, da, relation, da, da))
+        if use_index:
+            exec_sql(db_conn, "create index %s_%s_block_set_index on %s_%s_block_set(%s)" %
+                     (relation, da, relation, da, da))
         cur_card = int(get_first_res(db_conn, "select count(%s) from %s_%s_block_set" % (da, relation, da)))
         cnt_block_set += cur_card
         insert(db_conn, relation+"_block_card_list", "'%s', %d" % (da, cur_card))
         insert(db_conn, relation+"_card_list", "'%s', %d" % (da, cur_card))
-    exec_sql(db_conn, "create index %s_card_list_index on %s_card_list(attribute)" %
-             (relation, relation))
-    exec_sql(db_conn, "create index %s_block_card_list_index on %s_block_card_list(attribute)" %
-             (relation, relation))
+    if use_index:
+        exec_sql(db_conn, "create index %s_card_list_index on %s_card_list(attribute)" %
+                 (relation, relation))
+        exec_sql(db_conn, "create index %s_block_card_list_index on %s_block_card_list(attribute)" %
+                 (relation, relation))
 
     # max_density = calc_density(block_mass, relation_mass)
     max_density = 0.0
@@ -114,8 +104,9 @@ def find_single_block(relation_mass):
         drop_and_copy_table(db_conn, relation+"_"+da+"_set", relation+"_"+da + "_order", "*")
         exec_sql(db_conn, "alter table %s_%s_order add column orders integer default %d" %
                  (relation, da, cnt_block_set+2))
-        exec_sql(db_conn, "create index %s_%s_order_index on %s_%s_order(%s)" %
-                 (relation, da, relation, da, da))
+        if use_index:
+            exec_sql(db_conn, "create index %s_%s_order_index on %s_%s_order(%s)" %
+                     (relation, da, relation, da, da))
 
     while cnt_block_set > 0:
         # bug fix
@@ -138,48 +129,44 @@ def find_single_block(relation_mass):
                                      (dimension, relation, dimension)))
         drop_table(db_conn, "%s_%s_remove_set" % (relation, dimension))
         exec_sql(db_conn, "drop index if exists %s_%s_remove_set_index" % (relation, dimension))
-        # exec_sql(db_conn, "create table %s_%s_remove_set as "
-        #         "(select a.%s, b.mass from %s_%s_block_set a, %s_%s_mass_set b "
-        #         "where a.%s=b.%s and b.mass <= %.16f / (%d * 1.0) order by b.mass)" %
-        #          (relation, dimension, dimension, relation, dimension, relation,
-        #           dimension, dimension, dimension, block_mass, cur_card))
+
         exec_sql(db_conn, "create table %s_%s_remove_set as (select %s, mass, rank() over(order by mass, %s) as idx"
                           " from %s_%s_mass_set where mass <= %.16f / (%d * 1.0) order by mass, %s)" %
                  (relation, dimension, dimension, dimension, relation, dimension, block_mass, cur_card, dimension))
-        exec_sql(db_conn, "create index %s_%s_remove_set_index on %s_%s_remove_set(idx)" %
-                 (relation, dimension, relation, dimension))
+        if use_index:
+            exec_sql(db_conn, "create index %s_%s_remove_set_index on %s_%s_remove_set(idx)" %
+                     (relation, dimension, relation, dimension))
         removed_size = int(get_first_res(db_conn, "select count(%s) from %s_%s_remove_set" %
                                          (dimension, relation, dimension)))
-        # TODO: try iterate using cursor
+
         if DEBUG:
             print "removed_size:", removed_size
-        for i in range(1, removed_size+1):
-            cur = db_conn.cursor()
-            cur.execute("select %s, mass from %s_%s_remove_set where idx=%d" % (dimension, relation, dimension, i))
-            a, mass_a = cur.fetchone()[0:2]
-            mass_a = float(mass_a)
-            db_conn.commit()
+
+        global_cur = db_conn.cursor()
+        global_cur.execute("select %s, mass from %s_%s_remove_set" % (dimension, relation, dimension))
+        cur = db_conn.cursor()
+        for record in global_cur:
+            a = record[0]
+            mass_a = float(record[1])
             sql = cur.mogrify("delete from %s_%s_block_set where %s=%%s" % (relation, dimension, dimension), (a, ))
             cur.execute(sql)
-            db_conn.commit()
             block_mass -= mass_a
-            cur.close()
 
             update(db_conn, "%s_block_card_list" % relation, "card = card - 1 where attribute='%s'" % dimension)
             tmp_density = calc_density(block_mass, relation_mass)
-            cur = db_conn.cursor()
-            # sql = cur.mogrify("insert into %s_%s_order(%s, orders) values(%%s, %d)" %
-            #                   (relation, dimension, dimension, r), (a,))
+
             sql = cur.mogrify("update %s_%s_order set orders=%d where %s=%%s" %
                               (relation, dimension, r, dimension), (a,))
             cur.execute(sql)
-            db_conn.commit()
-            cur.close()
 
             r += 1
             if tmp_density > max_density:
                 max_density = tmp_density
                 best_r = r
+
+        cur.close()
+        global_cur.close()
+
         if DEBUG:
             print "best_r", best_r
         exec_sql(db_conn, "delete from %s_block a where exists (select * from %s_%s_remove_set b "

@@ -32,6 +32,14 @@ elif dataset == "syn":
     density_measure = "ari"  # ari, geo, sus
     dimension_selection = "dense"  # dense, card
     max_len_of_attributes = 9
+elif dataset == "syn2":
+    relation = "syn2"
+    k = 1
+    dimension_attributes = ["a0", "a1", "a2", "a3"]
+    measure_attribute = ""
+    density_measure = "ari"  # ari, geo, sus
+    dimension_selection = "dense"  # dense, card
+    max_len_of_attributes = 9
 elif dataset == "videos":
     relation = "videos_sample"
     k = 1
