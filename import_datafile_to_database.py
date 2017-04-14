@@ -5,7 +5,7 @@ import os
 
 path = sys.argv[1]
 if not os.path.exists(path):
-    print "Error: could not file data file. Please modify the data_path parameter in Makefile to the path of darpa.csv (without label)"
+    print "Error: could not find data file. Please modify the data_path parameter in Makefile to the path of darpa.csv (without label)"
     exit(-1)
 path = os.path.abspath(path)
 

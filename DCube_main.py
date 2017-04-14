@@ -7,52 +7,77 @@ from timeit import default_timer as timer
 
 db_conn = None
 use_index = True
-dummy_column = False
+dummy_column = True
+da_str = ",".join(dimension_attributes)
 
 
 def D_Cube():
     drop_and_copy_table(db_conn, relation, relation+"_copy", "*")
     drop_and_copy_table(db_conn, relation, relation+"_results", "*", copy_data=False)
+    if dummy_column:
+        exec_sql(db_conn, "alter table %s_results add column _to_remove smallint" % relation)
     drop_and_create_table(db_conn, relation+"_parameters", "block integer, density numeric, row_count integer, time numeric")
     for da in dimension_attributes:
         drop_and_copy_table(db_conn, relation, relation+"_"+da+"_set", "distinct "+da)
+    if dummy_column:
+        exec_sql(db_conn, "alter table %s add column _is_removed smallint default 0" % relation)
     for itr in range(1, 1+k):
         start = timer()
         if DEBUG:
             print "iteration:", itr
         try:
             if measure_attribute == "":
-                relation_mass = float(get_first_res(db_conn, "select count(*) from %s" % relation))
+                if dummy_column:
+                    relation_mass = float(get_first_res(db_conn, "select count(*) from %s where _is_removed = 0" % relation))
+                else:
+                    relation_mass = float(get_first_res(db_conn, "select count(*) from %s" % relation))
                 if relation_mass == 0.0:
                     print "relation already empty"
                     return
             else:
-                relation_mass = float(get_first_res(db_conn, "select sum(%s) from %s" % (measure_attribute, relation)))
+                if dummy_column:
+                    relation_mass = float(get_first_res(db_conn, "select sum(%s) from %s where _is_removed=0" % (measure_attribute, relation)))
+                else:
+                    relation_mass = float(get_first_res(db_conn, "select sum(%s) from %s" % (measure_attribute, relation)))
         except:
             print "relation already empty"
             return
         max_density = find_single_block(relation_mass)
 
         # improve efficiency
-        exec_sql(db_conn, "alter table %s add column _to_remove smallint default 1" % relation)
+        exec_sql(db_conn, "alter table %s add column _to_remove smallint default %d" % (relation, itr))
         for da in dimension_attributes:
             update(db_conn, relation, "_to_remove = 0 where not exists "
                                       "(select * from %s_%s_res_block_set b where %s.%s=b.%s)" %
                    (relation, da, relation, da, da))
-        exec_sql(db_conn, "delete from %s where _to_remove = 1" % relation)
+        if dummy_column:
+            update(db_conn, relation, "_is_removed = 1 where _to_remove <> 0")
+        else:
+            exec_sql(db_conn, "delete from %s where _to_remove <> 0" % relation)
+
+        for da in dimension_attributes:
+            if dummy_column:
+                drop_table(db_conn, relation+"_"+da+"_set")
+                exec_sql(db_conn, "select distinct %s into %s_%s_set from %s where _is_removed=0" % (da, relation, da, relation))
+            else:
+                drop_and_copy_table(db_conn, relation, relation+"_"+da+"_set", "distinct "+da)
+
+        if dummy_column:
+            exec_sql(db_conn, "insert into %s_results select %s, _to_remove as block_idx from %s where _to_remove<>0" %
+                     (relation, da_str, relation))
+            block_cnt = int(get_first_res(db_conn, "select count(*) from %s where _to_remove<>0" % relation))
+        else:
+            drop_and_copy_table(db_conn, "%s_copy" % relation, "%s_res_to_add" % relation, "*")
+            for da in dimension_attributes:
+                exec_sql(db_conn, "delete from %s_res_to_add a where not exists "
+                                  "(select * from %s_%s_res_block_set b where a.%s=b.%s)" %
+                         (relation, relation, da, da, da))
+            exec_sql(db_conn, "insert into %s_results select * from %s_res_to_add" % (relation, relation))
+            block_cnt = int(get_first_res(db_conn, "select count(*) from %s_res_to_add" % relation))
+            drop_table(db_conn, "%s_res_to_add" % relation)
+
         exec_sql(db_conn, "alter table %s drop column _to_remove" % relation)
 
-        for da in dimension_attributes:
-            drop_and_copy_table(db_conn, relation, relation+"_"+da+"_set", "distinct "+da)
-
-        drop_and_copy_table(db_conn, "%s_copy" % relation, "%s_res_to_add" % relation, "*")
-        for da in dimension_attributes:
-            exec_sql(db_conn, "delete from %s_res_to_add a where not exists "
-                              "(select * from %s_%s_res_block_set b where a.%s=b.%s)" %
-                     (relation, relation, da, da, da))
-        exec_sql(db_conn, "insert into %s_results select * from %s_res_to_add" % (relation, relation))
-        block_cnt = int(get_first_res(db_conn, "select count(*) from %s_res_to_add" % relation))
-        drop_table(db_conn, "%s_res_to_add" % relation)
         end = timer()
         insert(db_conn, relation+"_parameters", "%d, %.8f, %d, %.8f" % (itr, max_density, block_cnt, end-start))
         print "block %d: density: %.8f count: %d time: %.8f" % (itr, max_density, block_cnt, end-start)
@@ -73,7 +98,11 @@ def update_block_set_and_block_card_list():
 
 
 def find_single_block(relation_mass):
-    drop_and_copy_table(db_conn, relation, relation+"_block", "*")
+    if dummy_column:
+        drop_table(db_conn, relation+"_block")
+        exec_sql(db_conn, "select * into %s_block from %s where _is_removed=0" % (relation, relation))
+    else:
+        drop_and_copy_table(db_conn, relation, relation+"_block", "*")
     block_mass = relation_mass
     cnt_block_set = 0
     drop_and_create_table(db_conn, relation+"_block_card_list", "attribute varchar(%d), card integer" %
@@ -129,10 +158,10 @@ def find_single_block(relation_mass):
                                      (dimension, relation, dimension)))
         drop_table(db_conn, "%s_%s_remove_set" % (relation, dimension))
         exec_sql(db_conn, "drop index if exists %s_%s_remove_set_index" % (relation, dimension))
-
         exec_sql(db_conn, "create table %s_%s_remove_set as (select %s, mass, rank() over(order by mass, %s) as idx"
                           " from %s_%s_mass_set where mass <= %.16f / (%d * 1.0) order by mass, %s)" %
                  (relation, dimension, dimension, dimension, relation, dimension, block_mass, cur_card, dimension))
+
         if use_index:
             exec_sql(db_conn, "create index %s_%s_remove_set_index on %s_%s_remove_set(idx)" %
                      (relation, dimension, relation, dimension))
@@ -171,6 +200,7 @@ def find_single_block(relation_mass):
             print "best_r", best_r
         exec_sql(db_conn, "delete from %s_block a where exists (select * from %s_%s_remove_set b "
                           "where a.%s=b.%s)" % (relation, relation, dimension, dimension, dimension))
+        # may slow
         cnt_block_set = update_block_set_and_block_card_list()
 
     for da in dimension_attributes:
