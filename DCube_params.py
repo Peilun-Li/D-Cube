@@ -11,7 +11,7 @@ if dataset == "darpa":
     # relation/table name
     relation = "darpa_sample"
     # k is number of dense blocks to find
-    k = 1
+    k = 20
     # column names for dimension attributes
     dimension_attributes = ["source", "destination", "timestamp"]
     # column name for measure attribute, or empty "" if the mass is just count of rows
