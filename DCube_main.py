@@ -318,4 +318,8 @@ def main():
 
 
 if __name__ == "__main__":
+    args = sys.argv
+    if len(args) > 1:
+        density_measure = args[1]
+        dimension_selection = args[2]
     main()
