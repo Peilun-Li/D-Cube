@@ -2,7 +2,7 @@ import sys
 import os
 from DCube_sql import *
 
-data_path = "/Users/lipeilun/Documents/dataset/datasets/darpa.csv"
+data_path = "D:/dataset/datasets/darpa_with_label.csv"
 exp_conn = connect_db()
 
 try:

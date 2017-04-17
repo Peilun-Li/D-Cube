@@ -7,6 +7,7 @@ from timeit import default_timer as timer
 
 db_conn = None
 use_index = True
+index_type = 'btree' #(btree, hash, gist, gin)
 dummy_column = True
 
 
@@ -115,17 +116,17 @@ def find_single_block(relation_mass):
     for da in dimension_attributes:
         drop_and_copy_table(db_conn, relation+"_"+da+"_set", relation+"_"+da+"_block_set", "*")
         if use_index:
-            exec_sql(db_conn, "create index %s_%s_block_set_index on %s_%s_block_set(%s)" %
-                     (relation, da, relation, da, da))
+            exec_sql(db_conn, "create index %s_%s_block_set_index on %s_%s_block_set using %s(%s)" %
+                     (relation, da, relation, da, index_type, da))
         cur_card = int(get_first_res(db_conn, "select count(%s) from %s_%s_block_set" % (da, relation, da)))
         cnt_block_set += cur_card
         insert(db_conn, relation+"_block_card_list", "'%s', %d" % (da, cur_card))
         insert(db_conn, relation+"_card_list", "'%s', %d" % (da, cur_card))
     if use_index:
-        exec_sql(db_conn, "create index %s_card_list_index on %s_card_list(attribute)" %
-                 (relation, relation))
-        exec_sql(db_conn, "create index %s_block_card_list_index on %s_block_card_list(attribute)" %
-                 (relation, relation))
+        exec_sql(db_conn, "create index %s_card_list_index on %s_card_list using %s(attribute)" %
+                 (relation, relation, index_type))
+        exec_sql(db_conn, "create index %s_block_card_list_index on %s_block_card_list using %s(attribute)" %
+                 (relation, relation, index_type))
 
     # max_density = calc_density(block_mass, relation_mass)
     max_density = 0.0
@@ -137,8 +138,8 @@ def find_single_block(relation_mass):
         exec_sql(db_conn, "alter table %s_%s_order add column orders integer default %d" %
                  (relation, da, cnt_block_set+2))
         if use_index:
-            exec_sql(db_conn, "create index %s_%s_order_index on %s_%s_order(%s)" %
-                     (relation, da, relation, da, da))
+            exec_sql(db_conn, "create index %s_%s_order_index on %s_%s_order using %s(%s)" %
+                     (relation, da, relation, da, index_type, da))
 
     while cnt_block_set > 0:
         # bug fix
@@ -160,14 +161,14 @@ def find_single_block(relation_mass):
         cur_card = int(get_first_res(db_conn, "select count(%s) from %s_%s_block_set" %
                                      (dimension, relation, dimension)))
         drop_table(db_conn, "%s_%s_remove_set" % (relation, dimension))
-        exec_sql(db_conn, "drop index if exists %s_%s_remove_set_index" % (relation, dimension))
+        #exec_sql(db_conn, "drop index if exists %s_%s_remove_set_index" % (relation, dimension))
         exec_sql(db_conn, "create table %s_%s_remove_set as (select %s, mass, rank() over(order by mass, %s) as idx"
                           " from %s_%s_mass_set where mass <= %.16f / (%d * 1.0) order by mass, %s)" %
                  (relation, dimension, dimension, dimension, relation, dimension, block_mass, cur_card, dimension))
 
-        if use_index:
-            exec_sql(db_conn, "create index %s_%s_remove_set_index on %s_%s_remove_set(idx)" %
-                     (relation, dimension, relation, dimension))
+        #if use_index:
+        #    exec_sql(db_conn, "create index %s_%s_remove_set_index on %s_%s_remove_set using %s(idx)" %
+        #             (relation, dimension, relation, dimension, index_type))
         removed_size = int(get_first_res(db_conn, "select count(%s) from %s_%s_remove_set" %
                                          (dimension, relation, dimension)))
 
