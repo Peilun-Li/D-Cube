@@ -3,11 +3,11 @@ from DCube_sql import *
 import sys
 import numpy as np
 from timeit import default_timer as timer
-
+import ast
 
 db_conn = None
 use_index = True
-index_type = 'btree' #(btree, hash, gist, gin)
+index_type = 'btree' #(btree, hash)
 dummy_column = True
 
 
@@ -326,4 +326,10 @@ if __name__ == "__main__":
     if len(args) > 1:
         density_measure = args[1]
         dimension_selection = args[2]
+        if len(args) > 3:
+            relation = args[3]
+        if len(args) > 4:
+            dimension_attributes = ast.literal_eval(args[4])
+        if len(args) > 5:
+            k = int(args[5])			
     main()

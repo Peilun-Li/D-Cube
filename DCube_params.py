@@ -1,8 +1,8 @@
 DEBUG = True
 
 PSQL_DB = "postgres"
-PSQL_DB_USER = ""
-PSQL_DB_PWD = ""
+PSQL_DB_USER = "postgre"
+PSQL_DB_PWD = "password"
 PSQL_DB_PORT = 5432
 
 dataset = "darpa"
@@ -23,6 +23,14 @@ if dataset == "darpa":
     # where dense = maximum density first, card = maximum cardinality first
     dimension_selection = "dense"
     # max length of strings in dimension_attributes
+    max_len_of_attributes = 20
+elif dataset == "airforce":
+    relation = "airforce_sample"
+    k = 20
+    dimension_attributes = ["protocol", "service", "flag", "src_bytes", "dst_bytes", "host_cnt", "srv_cnt"]
+    measure_attribute = ""
+    density_measure = "ari"
+    dimension_selection = "dense"
     max_len_of_attributes = 20
 elif dataset == "syn":
     relation = "syn"
