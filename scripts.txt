@@ -1,0 +1,73 @@
+#EXPORT DARPA
+
+\copy (select * from darpa_parameters_ari_dense) to 'D:\dataset\darpa_output\darpa_parameters_ari_dense.csv' delimiter ',' csv header 
+
+\copy (select * from darpa_results_ari_dense) to 'D:\dataset\darpa_output\darpa_results_ari_dense.csv' delimiter ',' csv header 
+
+\copy (select * from darpa_parameters_ari_card) to 'D:\dataset\darpa_output\darpa_parameters_ari_card.csv' delimiter ',' csv header 
+
+\copy (select * from darpa_results_ari_card) to 'D:\dataset\darpa_output\darpa_results_ari_card.csv' delimiter ',' csv header 
+
+\copy (select * from darpa_parameters_geo_dense) to 'D:\dataset\darpa_output\darpa_parameters_geo_dense.csv' delimiter ',' csv header 
+
+\copy (select * from darpa_results_geo_dense) to 'D:\dataset\darpa_output\darpa_results_geo_dense.csv' delimiter ',' csv header 
+
+\copy (select * from darpa_parameters_geo_card) to 'D:\dataset\darpa_output\darpa_parameters_geo_card.csv' delimiter ',' csv header 
+
+\copy (select * from darpa_results_geo_card) to 'D:\dataset\darpa_output\darpa_results_geo_card.csv' delimiter ',' csv header 
+
+\copy (select * from darpa_parameters_sus_dense) to 'D:\dataset\darpa_output\darpa_parameters_sus_dense.csv' delimiter ',' csv header 
+
+\copy (select * from darpa_results_sus_dense) to 'D:\dataset\darpa_output\darpa_results_sus_dense.csv' delimiter ',' csv header 
+
+\copy (select * from darpa_parameters_sus_card) to 'D:\dataset\darpa_output\darpa_parameters_sus_card.csv' delimiter ',' csv header 
+
+\copy (select * from darpa_results_sus_card) to 'D:\dataset\darpa_output\darpa_results_sus_card.csv' delimiter ',' csv header 
+
+
+#EXPORT AIRFORCE
+
+\copy (select * from airforce_parameters_ari_dense) to 'D:\dataset\airforce_output\airforce_parameters_ari_dense.csv' delimiter ',' csv header 
+
+\copy (select * from airforce_results_ari_dense) to 'D:\dataset\airforce_output\airforce_results_ari_dense.csv' delimiter ',' csv header 
+
+\copy (select * from airforce_parameters_ari_card) to 'D:\dataset\airforce_output\airforce_parameters_ari_card.csv' delimiter ',' csv header 
+
+\copy (select * from airforce_results_ari_card) to 'D:\dataset\airforce_output\airforce_results_ari_card.csv' delimiter ',' csv header 
+
+\copy (select * from airforce_parameters_geo_dense) to 'D:\dataset\airforce_output\airforce_parameters_geo_dense.csv' delimiter ',' csv header 
+
+\copy (select * from airforce_results_geo_dense) to 'D:\dataset\airforce_output\airforce_results_geo_dense.csv' delimiter ',' csv header 
+
+\copy (select * from airforce_parameters_geo_card) to 'D:\dataset\airforce_output\airforce_parameters_geo_card.csv' delimiter ',' csv header 
+
+\copy (select * from airforce_results_geo_card) to 'D:\dataset\airforce_output\airforce_results_geo_card.csv' delimiter ',' csv header 
+
+\copy (select * from airforce_parameters_sus_dense) to 'D:\dataset\airforce_output\airforce_parameters_sus_dense.csv' delimiter ',' csv header 
+
+\copy (select * from airforce_results_sus_dense) to 'D:\dataset\airforce_output\airforce_results_sus_dense.csv' delimiter ',' csv header 
+
+\copy (select * from airforce_parameters_sus_card) to 'D:\dataset\airforce_output\airforce_parameters_sus_card.csv' delimiter ',' csv header 
+
+\copy (select * from airforce_results_sus_card) to 'D:\dataset\airforce_output\airforce_results_sus_card.csv' delimiter ',' csv header 
+
+#AMAZON
+
+create table amazon(user_id integer, app_id integer, time_in_hours integer, number_of_stars integer, label integer);
+copy amazon(user_id, app_id, time_in_hours, number_of_stars, label) from 'D:\dataset\datasets\amazon.csv' delimiter ',';
+
+python .\DCube_main.py ari dense amazon "['user_id','app_id','time_in_hours','number_of_stars']" 5
+
+#YELP
+
+create table yelp(user_id integer, business_id integer, time_in_hours integer, number_of_stars integer, label integer);
+copy yelp(user_id, business_id, time_in_hours, number_of_stars, label) from 'D:\dataset\datasets\yelp.csv' delimiter ',';
+
+python .\DCube_main.py ari dense yelp "['user_id','business_id','time_in_hours','number_of_stars']" 5
+
+#WIKIPEDIA
+
+create table wiki(user_name varchar, page varchar, time_in_hours integer);
+copy wiki(user_name, page, time_in_hours) from 'D:\dataset\datasets\wiki.csv' delimiter ',';
+
+python .\DCube_main.py geo dense wiki "['user_name','page','time_in_hours']" 5
