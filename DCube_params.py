@@ -1,7 +1,7 @@
 DEBUG = True
 
 PSQL_DB = "postgres"
-PSQL_DB_USER = "postgre"
+PSQL_DB_USER = "postgres"
 PSQL_DB_PWD = "password"
 PSQL_DB_PORT = 5432
 
