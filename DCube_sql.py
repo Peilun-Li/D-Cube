@@ -38,11 +38,13 @@ def drop_and_create_table(db_conn, table, column_define, can_pass=False):
 
 
 def drop_table(db_conn, table):
-    cur = db_conn.cursor()
-    cur.execute("drop table if exists %s" % table)
-    db_conn.commit()
-    cur.close()
-
+    try:
+        cur = db_conn.cursor()
+        cur.execute("drop table if exists %s" % table)
+        db_conn.commit()
+        cur.close()
+    except:
+        print 'Warning: No table %s to be dropped !' % table
 
 def exec_sql(db_conn, sql):
     cur = db_conn.cursor()

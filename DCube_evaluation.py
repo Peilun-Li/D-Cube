@@ -21,9 +21,12 @@ db_conn = None
 def D_Cube_evaluation():
 
     k = 20
+    # datasets = ['darpa']
+    # density_measures = ['ari', 'geo', 'sus']
+    # select_methods = ['card', 'dense']
     datasets = ['darpa']
-    density_measures = ['ari', 'geo', 'sus']
-    select_methods = ['card', 'dense']
+    density_measures = ['ari']
+    select_methods = ['dense']
 
     pos_total = int(get_first_res(db_conn, "select count(*) from darpa_sample where label !='-'"))
     neg_total = int(get_first_res(db_conn, "select count(*) from darpa_sample where label ='-'"))
@@ -38,10 +41,11 @@ def D_Cube_evaluation():
         for dm in density_measures:
             for sm in select_methods:
                 try:
+                    
                     true_pos_kgroup, false_pos_kgroup, pos_dup_factor, neg_dup_factor, relation_results = get_results(ds, dm, sm, k)
                     if DEBUG:
-                        # print 'true_pos_kgroup=%s' % true_pos_kgroup
-                        # print 'false_pos_kgroup=%s' % false_pos_kgroup
+                        print 'true_pos_kgroup=%s' % true_pos_kgroup
+                        print 'false_pos_kgroup=%s' % false_pos_kgroup
                         pass
                     plot_ROC_curve(true_pos_kgroup, false_pos_kgroup, pos_total, neg_total, pos_dup_factor, neg_dup_factor, relation_results, k)
                     print 'Evaluation on %s_%s_%s Succeeded :) !' % (ds, dm, sm)
@@ -60,19 +64,24 @@ def get_results(dataset_name, density_measure, select_method, k):
     true_pos_kgroup = {}
     false_pos_kgroup = {}
 
-    cur = db_conn.cursor()
-    cur.execute("select block_idx, count(*) from %s where label !='-' group by block_idx ;" % relation_results)
-    for record in cur:
-        idx = int(record[0])
-        count = int(record[1])
-        true_pos_kgroup[idx] = count
+    try:
+        cur = db_conn.cursor()
+        cur.execute("select block_idx, count(*) from %s where label !='-' group by block_idx ;" % relation_results)
+        for record in cur:
+            idx = int(record[0])
+            count = int(record[1])
+            true_pos_kgroup[idx] = count
 
-    cur_false = db_conn.cursor()
-    cur_false.execute("select block_idx, count(*) from %s where label ='-' group by block_idx ;" % relation_results)
-    for record in cur_false:
-        idx = int(record[0])
-        count = int(record[1])
-        false_pos_kgroup[idx] = count
+        cur_false = db_conn.cursor()
+        cur_false.execute("select block_idx, count(*) from %s where label ='-' group by block_idx ;" % relation_results)
+        for record in cur_false:
+            idx = int(record[0])
+            count = int(record[1])
+            false_pos_kgroup[idx] = count
+    except:
+        print 'Access to results table %s failed !' % relation_results
+        print "Unexpected error:", sys.exc_info()
+
 
     for i in range(2, k+1, 1):
         if i not in true_pos_kgroup:
@@ -85,14 +94,17 @@ def get_results(dataset_name, density_measure, select_method, k):
             false_pos_kgroup[i] = false_pos_kgroup[i-1] + false_pos_kgroup[i]
 
     # Calculate duplicate factor 
-    pos_distinct_num = int(get_first_res(db_conn, "select count(*) from (select distinct source, destination, timestamp from %s where label !='-') as dis" % relation_results))
-    pos_total_num = int(get_first_res(db_conn, "select count(*) from %s where label !='-'" % relation_results))
-    pos_dup_factor  = float(pos_total_num) / pos_distinct_num
-    
-    neg_distinct_num = int(get_first_res(db_conn, "select count(*) from (select distinct source, destination, timestamp from %s where label ='-') as dis" % relation_results))
-    neg_total_num = int(get_first_res(db_conn, "select count(*) from %s where label ='-'" % relation_results))
-    neg_dup_factor = float(neg_total_num) / neg_distinct_num
-
+    try:
+        pos_distinct_num = int(get_first_res(db_conn, "select count(*) from (select distinct source, destination, timestamp from %s where label !='-') as dis" % relation_results))
+        pos_total_num = int(get_first_res(db_conn, "select count(*) from %s where label !='-'" % relation_results))
+        pos_dup_factor  = float(pos_total_num) / pos_distinct_num
+        
+        neg_distinct_num = int(get_first_res(db_conn, "select count(*) from (select distinct source, destination, timestamp from %s where label ='-') as dis" % relation_results))
+        neg_total_num = int(get_first_res(db_conn, "select count(*) from %s where label ='-'" % relation_results))
+        neg_dup_factor = float(neg_total_num) / neg_distinct_num
+    except:
+        print 'Access to calculate duplicate factor on results table %s failed !' % relation_results
+        print "Unexpected error:", sys.exc_info()
     return true_pos_kgroup, false_pos_kgroup, pos_dup_factor, neg_dup_factor, relation_results
 
 
@@ -109,6 +121,8 @@ def plot_ROC_curve(true_pos_kgroup, false_pos_kgroup, pos_total, neg_total, pos_
         print 'Y=', y
     x.append(1.0)
     y.append(1.0)
+    x.insert(0, 0.0)
+    y.insert(0, 0.0)
 
     roc_auc = auc(x, y)
     
@@ -128,12 +142,25 @@ def plot_ROC_curve(true_pos_kgroup, false_pos_kgroup, pos_total, neg_total, pos_
     plt.savefig('/roc_figures/roc_auc_%s.pdf' % relation_results)
     return roc_auc
 
+
+def drop_tables():
+    
+    datasets = ['darpa']
+    density_measures = ['ari', 'geo', 'sus']
+    select_methods = ['card', 'dense']
+
+    for ds in datasets:
+        for dm in density_measures:
+            for sm in select_methods:
+                relation_results = ds + '_results_' + dm + '_' + sm
+                drop_table(db_conn, relation_results)
+
 def main():
     global db_conn
     try:
         db_conn = connect_db()
         D_Cube_evaluation()
-        # drop_tables()
+        drop_tables()
         close_db(db_conn)
         # print "D_Cube finished! Results are stored in %s_results and %s_parameters" % (relation, relation)
     except:
