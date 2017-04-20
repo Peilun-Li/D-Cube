@@ -108,7 +108,6 @@ def get_results(dataset_name, density_measure, select_method, k):
 
     # Calculate duplicate factor 
 
-
     # try:
     #     pos_distinct_num = int(get_first_res(db_conn, "select count(*) from (select distinct source, destination, timestamp from %s where label !='-') as dis" % relation_results))
     #     pos_total_num = int(get_first_res(db_conn, "select count(*) from %s where label !='-'" % relation_results))
@@ -191,22 +190,5 @@ def main():
         raise
 
 
-# true_pos_kgroup={1: 231388, 2: 898930, 3: 1108322, 4: 1230333, 5: 1293539, 6: 1851962, 7: 2113542, 8: 2170426, 9: 2182055, 10: 2194575, 11: 2318562, 12: 2342026, 13: 2361569, 14: 2386026, 15: 2386071, 16: 2455885, 17: 2500564, 18: 2559567, 19: 2596721, 20: 2650007}
-# false_pos_kgroup={1: 0, 2: 13, 3: 13, 4: 13, 5: 13, 6: 14808, 7: 14815, 8: 14815, 9: 14815, 10: 14815, 11: 14815, 12: 14820, 13: 23630, 14: 36311, 15: 39294, 16: 169486, 17: 328302, 18: 473890, 19: 599916, 20: 724878}
-
-# plot_ROC_curve(true_pos_kgroup, false_pos_kgroup, pos_total, neg_total, pos_dup_factor, neg_dup_factor, '', 20)
-
 if __name__ == "__main__":
-    # args = sys.argv
     main()
-
-# AUC: reference
-# Datasets AirForce DARPA
-# Elapsed Accuracy Elapsed Accuracy
-# Time (sec) (AUC) Time (sec) (AUC)
-# CPD [24] 413.2 0.854 105.0 0.926
-# MAF [27] 486.6 0.912 102.4 0.514
-# CrossSpot [19] 575.5 0.924 132.2 0.923
-# M-Zoom [37] 27.7 0.975 22.7 0.923
-# D-Cube 15.6 0.987 9.1 0.930
-

@@ -1,8 +1,8 @@
 DEBUG = True
 
 PSQL_DB = "postgres"
-PSQL_DB_USER = "zhouchangkai"
-PSQL_DB_PWD = ""
+PSQL_DB_USER = "user"
+PSQL_DB_PWD = "password"
 PSQL_DB_PORT = 5432
 
 dataset = "darpa"
