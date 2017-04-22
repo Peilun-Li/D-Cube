@@ -21,7 +21,9 @@ clean:
 	@echo "Cleaned"
 
 all.tar:
+	mv README.md README
 	tar -cvf all.tar *.py doc Makefile README syn.csv
+	mv README README.md
 	
 darpa:
 	@python import_darpa_to_database.py $(data_path_darpa)
