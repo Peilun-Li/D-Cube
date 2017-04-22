@@ -1,7 +1,5 @@
 # generate 3D synthetic data
-
 import random
-
 
 def add_block(syn_data, start_coords, block_size, density):
     for i in range(start_coords[0], start_coords[0]+block_size[0]):

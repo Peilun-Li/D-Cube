@@ -58,6 +58,8 @@ copy amazon(user_id, app_id, time_in_hours, number_of_stars, label) from 'D:\dat
 
 python .\DCube_main.py ari dense amazon "['user_id','app_id','time_in_hours','number_of_stars']" 5
 
+select block_idx, count(distinct user_id), count(distinct app_id), count(distinct time_in_hours), count(distinct number_of_stars) from amazon_results group by block_idx;
+
 #YELP
 
 create table yelp(user_id integer, business_id integer, time_in_hours integer, number_of_stars integer, label integer);
@@ -65,9 +67,24 @@ copy yelp(user_id, business_id, time_in_hours, number_of_stars, label) from 'D:\
 
 python .\DCube_main.py ari dense yelp "['user_id','business_id','time_in_hours','number_of_stars']" 5
 
+select block_idx, count(distinct user_id), count(distinct business_id), count(distinct time_in_hours), count(distinct number_of_stars) from yelp_results group by block_idx;
+
 #WIKIPEDIA
 
-create table wiki(user_name varchar, page varchar, time_in_hours integer);
-copy wiki(user_name, page, time_in_hours) from 'D:\dataset\datasets\wiki.csv' delimiter ',';
+create table wiki(user_name varchar, page varchar, time_in_hours varchar);
+copy wiki(user_name, page, time_in_hours) from 'D:\dataset\datasets\wiki.csv' delimiter ',' encoding 'GBK';
 
 python .\DCube_main.py geo dense wiki "['user_name','page','time_in_hours']" 5
+
+select block_idx, count(distinct user_name), count(distinct page), count(distinct time_in_hours) from wiki_results group by block_idx;
+
+
+# DARPA
+
+select block_idx, count(distinct source), count(distinct destination), count(distinct timestamp) from darpa_results_ari_dense group by block_idx;
+
+# AIRFORCE
+
+select block_idx, count(distinct protocol), count(distinct service), count(distinct flag), 
+count(distinct src_bytes), count(distinct dst_bytes), count(distinct host_cnt), count(distinct srv_cnt)
+ from airforce_results_ari_dense group by block_idx;
