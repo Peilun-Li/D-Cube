@@ -1,8 +1,6 @@
 # run D-Cube
 
-# change path to darpa.csv here
-data_path_darpa = D:/dataset/datasets/darpa_with_label.csv
-resultfolder_path_darpa = /Users/lipeilun/Documents/dataset/datasets/darpa.csv
+# change path here you want to run other tasks
 data_path_darpa = /Users/zhouchangkai/Desktop/CMU/course/15826/Project/datasets/darpa_with_label.csv
 data_path_airforce = /Users/zhouchangkai/Desktop/CMU/course/15826/Project/datasets/airforce_with_label.csv
 resultfolder_path_darpa = /Users/zhouchangkai/Desktop/CMU/course/15826/Project/darpa_output
@@ -18,12 +16,19 @@ paper.pdf:
 	@echo "Final paper already generated for you"
 
 clean:
+	rm *.pyc
 	@echo "Cleaned"
 
+
+ifneq ("$(wildcard README.md)", "")
 all.tar:
 	mv README.md README
 	tar -cvf all.tar *.py doc Makefile README syn.csv
 	mv README README.md
+else
+all.tar:
+	tar -cvf all.tar *.py doc Makefile README syn.csv
+endif
 	
 darpa:
 	@python import_darpa_to_database.py $(data_path_darpa)
