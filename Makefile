@@ -1,6 +1,6 @@
 # run D-Cube
 
-# change path here you want to run other tasks
+# change path here if you want to run other tasks
 data_path_darpa = /Users/zhouchangkai/Desktop/CMU/course/15826/Project/datasets/darpa_with_label.csv
 data_path_airforce = /Users/zhouchangkai/Desktop/CMU/course/15826/Project/datasets/airforce_with_label.csv
 resultfolder_path_darpa = /Users/zhouchangkai/Desktop/CMU/course/15826/Project/darpa_output
