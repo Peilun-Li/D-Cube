@@ -15,21 +15,27 @@ import sys, os
 DEBUG = 1
 db_conn = None
 
-def D_Cube_evaluation():
+def D_Cube_evaluation(file_name):
 
     k = 20
-    # datasets = ['darpa']
-    # density_measures = ['ari', 'geo', 'sus']
-    # select_methods = ['card', 'dense']
-    # datasets = ['darpa']
-    datasets = ['airforce']
+    datasets = ['default']
     density_measures = ['ari']
     select_methods = ['dense']
+    pos_total, neg_total = 0, 0
 
-    # pos_total = int(get_first_res(db_conn, "select count(*) from darpa_sample where label !='-'"))
-    # neg_total = int(get_first_res(db_conn, "select count(*) from darpa_sample where label ='-'"))
-    pos_total = int(get_first_res(db_conn, "select count(*) from airforce_sample where label !='normal.'"))
-    neg_total = int(get_first_res(db_conn, "select count(*) from airforce_sample where label ='normal.'"))
+    if file_name == 'darpa':
+        datasets = ['darpa']
+    
+    if file_name == 'airforce':
+        datasets = ['airforce']
+
+    if file_name == 'darpa':
+        pos_total = int(get_first_res(db_conn, "select count(*) from darpa_sample where label !='-'"))
+        neg_total = int(get_first_res(db_conn, "select count(*) from darpa_sample where label ='-'"))
+
+    if file_name == 'airforce':
+        pos_total = int(get_first_res(db_conn, "select count(*) from airforce_sample where label !='normal.'"))
+        neg_total = int(get_first_res(db_conn, "select count(*) from airforce_sample where label ='normal.'"))
     
     if DEBUG:
         print 'pos_total=%s' % pos_total
@@ -40,7 +46,7 @@ def D_Cube_evaluation():
             for sm in select_methods:
                 try:
                     
-                    true_pos_kgroup, false_pos_kgroup, pos_dup_factor, neg_dup_factor, relation_results = get_results(ds, dm, sm, k)
+                    true_pos_kgroup, false_pos_kgroup, pos_dup_factor, neg_dup_factor, relation_results = get_results(ds, dm, sm, k, file_name)
                     if DEBUG:
                         print 'true_pos_kgroup=%s' % true_pos_kgroup
                         print 'false_pos_kgroup=%s' % false_pos_kgroup
@@ -56,29 +62,31 @@ def D_Cube_evaluation():
 
 
 
-def get_results(dataset_name, density_measure, select_method, k):
+def get_results(dataset_name, density_measure, select_method, k, file_name):
 
     relation_paras = dataset_name + '_parameters_' + density_measure + '_' + select_method 
     relation_results = dataset_name + '_results_' + density_measure + '_' + select_method
 
-    # Part 1
     true_pos_kgroup = {}
     false_pos_kgroup = {}
 
-
-
     try:
         cur = db_conn.cursor()
-        # cur.execute("select block_idx, count(*) from %s where label !='-' group by block_idx ;" % relation_results)
-        cur.execute("select block_idx, count(*) from %s where label !='normal.' group by block_idx ;" % relation_results)
+        if file_name == 'darpa':    
+            cur.execute("select block_idx, count(*) from %s where label !='-' group by block_idx ;" % relation_results)
+        if file_name == 'airforce':
+            cur.execute("select block_idx, count(*) from %s where label !='normal.' group by block_idx ;" % relation_results)
+
         for record in cur:
             idx = int(record[0])
             count = int(record[1])
             true_pos_kgroup[idx] = count
 
         cur_false = db_conn.cursor()
-        # cur_false.execute("select block_idx, count(*) from %s where label ='-' group by block_idx ;" % relation_results)
-        cur_false.execute("select block_idx, count(*) from %s where label ='normal.' group by block_idx ;" % relation_results)
+        if file_name == 'darpa':    
+            cur_false.execute("select block_idx, count(*) from %s where label ='-' group by block_idx ;" % relation_results)
+        if file_name == 'airforce':
+            cur_false.execute("select block_idx, count(*) from %s where label ='normal.' group by block_idx ;" % relation_results)
         for record in cur_false:
             idx = int(record[0])
             count = int(record[1])
@@ -105,9 +113,7 @@ def get_results(dataset_name, density_measure, select_method, k):
         else:
             false_pos_kgroup[i] = false_pos_kgroup[i-1] + false_pos_kgroup[i]
 
-
-    # Calculate duplicate factor 
-
+    # Calculate duplicate factor [Abandoned]
     # try:
     #     pos_distinct_num = int(get_first_res(db_conn, "select count(*) from (select distinct source, destination, timestamp from %s where label !='-') as dis" % relation_results))
     #     pos_total_num = int(get_first_res(db_conn, "select count(*) from %s where label !='-'" % relation_results))
@@ -150,7 +156,6 @@ def plot_ROC_curve(true_pos_kgroup, false_pos_kgroup, pos_total, neg_total, pos_
     plt.figure()
     plt.plot(x, y, color='darkorange', lw=lw, label='D-Cube')
     plt.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='--', label='Random Guess')
-    # plt.plot([],[],alpha=0.7, color='white', label='AUC = %0.3f' % roc_auc)
     plt.text(0.15, 0.9, 'AUC = %0.3f' % roc_auc, fontsize=12)
     plt.xlim([0.0, 1.0])
     plt.ylim([0.0, 1.05])
@@ -159,7 +164,7 @@ def plot_ROC_curve(true_pos_kgroup, false_pos_kgroup, pos_total, neg_total, pos_
     plt.title('ROC Curve', fontsize=15)
     plt.legend(loc="lower right")
     # plt.show()
-    plt.savefig('roc_auc_%s_new.pdf' % relation_results)
+    plt.savefig('roc_auc_%s.png' % relation_results)
     return roc_auc
 
 
@@ -175,11 +180,17 @@ def drop_tables():
                 relation_results = ds + '_results_' + dm + '_' + sm
                 drop_table(db_conn, relation_results)
 
-def main():
+def main(args):
     global db_conn
     try:
         db_conn = connect_db()
-        D_Cube_evaluation()
+        if DEBUG:
+            print '-----'
+            print args
+            print type(args[1])
+        for i in range(len(args)):
+            if i > 0:
+                D_Cube_evaluation(args[i])
         drop_tables()
         close_db(db_conn)
         # print "D_Cube finished! Results are stored in %s_results and %s_parameters" % (relation, relation)
@@ -191,4 +202,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    args = sys.argv
+    main(args)
+
