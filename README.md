@@ -1,5 +1,5 @@
-# D-Cube (Dense Subtensor Mining using SQL)
-This is a implementation of (D-Cube)[http://www.cs.cmu.edu/~kijungs/papers/dcubeWSDM2017.pdf] using SQL. (also a CMU 15-826 17 spring course project)
+# Dense Subtensor Mining using SQL
+This is a implementation of [D-Cube](http://www.cs.cmu.edu/~kijungs/papers/dcubeWSDM2017.pdf) using SQL. (also a CMU 15-826 17 spring course project)
 
 Dependencies:
 1. PostgreSQL
